@@ -1,0 +1,28 @@
+﻿using System.Reflection;
+using UnityEngine;
+
+namespace CustomTick
+{
+	public static partial class TickManager
+	{
+		private class TickMethod
+		{
+			public int Id;
+			public MonoBehaviour Target;
+			public MethodInfo Method;
+			public float Interval;
+			public float Timer;
+			public float DelayRemaining;
+
+			public TickMethod(int id, MonoBehaviour target, MethodInfo method, float interval, float delay = 0f)
+			{
+				Id = id;
+				Target = target;
+				Method = method;
+				Interval = interval;
+				Timer = interval;
+				DelayRemaining = delay;
+			}
+		}
+	}
+}

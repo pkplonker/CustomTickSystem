@@ -1,6 +1,5 @@
 using UnityEngine;
 using System;
-using PlasticPipe.PlasticProtocol.Client;
 
 namespace CustomTick
 {
@@ -8,10 +7,12 @@ namespace CustomTick
 	public class TickAttribute : Attribute
 	{
 		public float Interval { get; private set; }
+		public float Delay { get; private set; }
 
-		public TickAttribute(float interval)
+		public TickAttribute(float interval, float delay = 0f)
 		{
 			Interval = Mathf.Max(interval, 0f);
+			Delay = Mathf.Max(delay, 0f);
 		}
 	}
 }
