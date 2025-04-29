@@ -5,8 +5,8 @@ namespace CustomTick
 {
 	public class ExampleTicker : MonoBehaviour
 	{
-		private TickManager.TickHandle manualActionHandle;
-		private TickManager.TickHandle manualParamHandle;
+		private TickHandle manualActionHandle;
+		private TickHandle manualParamHandle;
 
 		private void Start()
 		{

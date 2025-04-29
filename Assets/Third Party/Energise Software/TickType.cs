@@ -1,12 +1,8 @@
-namespace CustomTick
+﻿#if UNITY_EDITOR
+internal enum TickType
 {
-	public static partial class TickManager
-	{
-		internal enum TickType
-		{
-			Action,
-			Method,
-			MethodWithParams
-		}
-	}
+	Action,
+	Method,
+	MethodWithParams
 }
+#endif

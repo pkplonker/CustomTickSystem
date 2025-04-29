@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 using UnityEngine;
 using UnityEngine.LowLevel;
@@ -8,7 +9,7 @@ using UnityEngine.SceneManagement;
 namespace CustomTick
 {
 	[DefaultExecutionOrder(-10000)]
-	public static partial class TickManager
+	internal static partial class TickManager
 	{
 		private static List<TickMethod> tickMethods = new();
 		private static List<TickAction> tickActions = new();
@@ -79,7 +80,8 @@ namespace CustomTick
 						}
 						else
 						{
-							Debug.LogWarning($"[Tick] method '{method.Name}' on '{behaviour.name}' must have no parameters.");
+							Debug.LogWarning(
+								$"[Tick] method '{method.Name}' on '{behaviour.name}' must have no parameters.");
 						}
 					}
 				}
@@ -118,18 +120,18 @@ namespace CustomTick
 				{
 					var item = items[i];
 
-					if (!item.IsValid())
-					{
-						items.RemoveAt(i);
-						continue;
-					}
-
 					if (item.ShouldTick(deltaTime))
 					{
 						item.Execute();
 
 						if (item.IsOneShot())
+						{
 							items.RemoveAt(i);
+						}
+					}
+					else if (!item.IsValid())
+					{
+						items.RemoveAt(i);
 					}
 				}
 			}
@@ -155,7 +157,11 @@ namespace CustomTick
 
 			group.Items.Add(tickItem);
 
-			return new TickHandle {Id = id, Type = TickType.Action};
+			var handle = new TickHandle {Id = id};
+#if UNITY_EDITOR
+			handle.Type = TickType.Action;
+#endif
+			return handle;
 		}
 
 		public static TickHandle Register(MonoBehaviour target, string methodName, object[] parameters, float interval,
@@ -187,7 +193,11 @@ namespace CustomTick
 
 			group.Items.Add(tickItem);
 
-			return new TickHandle {Id = id, Type = TickType.MethodWithParams};
+			var handle = new TickHandle {Id = id};
+#if UNITY_EDITOR
+			handle.Type = TickType.Action;
+#endif
+			return handle;
 		}
 
 		public static void Unregister(TickHandle handle)
@@ -207,14 +217,6 @@ namespace CustomTick
 					}
 				}
 			}
-		}
-
-		public struct TickHandle
-		{
-			internal int Id;
-			internal TickManager.TickType Type;
-
-			public bool IsValid => Id != 0;
 		}
 	}
 }

@@ -3,61 +3,33 @@ using UnityEngine;
 
 namespace CustomTick
 {
-	internal class TickMethodWithParams : ITickItem
+	internal class TickMethodWithParams : TickItemBase
 	{
-		public int Id;
-		public MonoBehaviour Target;
-		public MethodInfo Method;
-		public float Interval;
-		public float Timer;
-		public float DelayRemaining;
-		public object[] Parameters;
-		public bool OneShot;
-		private bool paused;
+		private WeakMonoBehaviour weakTarget;
+		private MethodInfo method;
+		private object[] parameters;
 
-		public TickMethodWithParams(int id, MonoBehaviour target, MethodInfo method, float interval,
-			object[] parameters, float delay, bool oneShot, bool paused)
+		public TickMethodWithParams(int id, MonoBehaviour target, MethodInfo method, float interval, object[] parameters, float delay, bool oneShot, bool paused)
+			: base(id, interval, delay, oneShot, paused)
 		{
-			Id = id;
-			Target = target;
-			Method = method;
-			Parameters = parameters;
-			Interval = interval;
-			Timer = interval;
-			DelayRemaining = delay;
-			OneShot = oneShot;
-			this.paused = paused;
+			this.weakTarget = new WeakMonoBehaviour(target);
+			this.method = method;
+			this.parameters = parameters;
 		}
 
-		public bool IsValid() => Target != null && Method != null;
-		public int GetId() => Id;
-		public bool IsPaused() => paused;
-		public void SetPaused(bool p) => paused = p;
-		public bool IsOneShot() => OneShot;
-
-		public bool ShouldTick(float deltaTime)
+		protected override bool ValidateTarget()
 		{
-			if (paused || !IsValid()) return false;
-
-			if (DelayRemaining > 0f)
-			{
-				DelayRemaining -= deltaTime;
-				return false;
-			}
-
-			Timer -= deltaTime;
-			if (Timer <= 0f)
-			{
-				Timer = Interval;
-				return true;
-			}
-
-			return false;
+			return weakTarget.IsAlive();
 		}
 
-		public void Execute()
+		public override void Execute()
 		{
-			Method?.Invoke(Target, Parameters);
+			var target = weakTarget.AsMonoBehaviour();
+			if (target != null)
+			{
+				method?.Invoke(target, parameters);
+			}
 		}
 	}
+
 }
