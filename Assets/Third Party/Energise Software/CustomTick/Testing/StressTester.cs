@@ -1,11 +1,10 @@
-﻿namespace CustomTick
-{
-	using UnityEngine;
-	using CustomTick;
+﻿using UnityEngine;
 
+namespace CustomTick
+{
 	public class StressTester : MonoBehaviour
 	{
-		private const int CountPerType = 500;
+		[SerializeField] private int CountPerType = 500;
 		private TickHandle[] actionHandles;
 		private TickHandle[] methodHandles;
 
@@ -29,6 +28,7 @@
 				actionHandles[i] = TickBuilder.Create(() => actionTickCount++)
 					.SetInterval(1.0f)
 					.SetDelay(Random.Range(0f, 2f))
+					.SetDescription($"ActionTick_{index}")
 					.Register();
 			}
 
@@ -38,6 +38,7 @@
 				methodHandles[i] = TickBuilder.Create(this, nameof(OnMethodTick), new object[] {index})
 					.SetInterval(1.0f)
 					.SetDelay(Random.Range(0f, 2f))
+					.SetDescription($"MethodTick_{index}")
 					.Register();
 			}
 		}

@@ -15,6 +15,7 @@ namespace CustomTick
 		private static Dictionary<float, TickGroup> tickGroups = new();
 #if UNITY_EDITOR
 		private static readonly Dictionary<int, TickType> tickIdToType = new();
+		private static readonly Dictionary<int, string> tickDescriptions = new();
 #endif
 		private static bool initialized = false;
 		private static int nextId = 1;
@@ -70,6 +71,7 @@ namespace CustomTick
 							}
 #if UNITY_EDITOR
 							tickIdToType[id] = TickType.Method;
+							tickDescriptions[id] = $"{behaviour.GetType().Name}.{method.Name}";
 #endif
 							group.Items.Add(tickItem);
 						}
@@ -146,50 +148,45 @@ namespace CustomTick
 		}
 
 		public static TickHandle Register(Action callback, float interval, float delay = 0f, bool oneShot = false,
-			bool paused = false)
+			bool paused = false
+#if UNITY_EDITOR
+			, string description = null
+#endif
+		)
 		{
-			if (callback == null || interval <= 0f)
-			{
-				Debug.LogWarning("Invalid Tick registration.");
-				return default;
-			}
+			if (callback == null || interval <= 0f) return default;
 
 			int id = nextId++;
 			var tickItem = new TickAction(id, callback, interval, delay, oneShot, paused);
 
 			if (!tickGroups.TryGetValue(interval, out var group))
-			{
-				group = new TickGroup();
-				tickGroups.Add(interval, group);
-			}
+				tickGroups[interval] = group = new TickGroup();
 
 			group.Items.Add(tickItem);
 
-			var handle = new TickHandle {Id = id};
-#if UNITY_EDITOR
-			handle.Type = TickType.Action;
-#endif
 #if UNITY_EDITOR
 			tickIdToType[id] = TickType.Action;
+			if (!string.IsNullOrEmpty(description))
+				tickDescriptions[id] = description;
 #endif
-			return handle;
+
+			return new TickHandle {Id = id};
 		}
 
 		public static TickHandle Register(MonoBehaviour target, string methodName, object[] parameters, float interval,
-			float delay = 0f, bool oneShot = false, bool paused = false)
+			float delay = 0f, bool oneShot = false, bool paused = false
+#if UNITY_EDITOR
+			, string description = null
+#endif
+		)
 		{
-			if (target == null || string.IsNullOrEmpty(methodName) || interval <= 0f)
-			{
-				Debug.LogWarning("Invalid Tick registration with parameters.");
-				return default;
-			}
+			if (target == null || string.IsNullOrEmpty(methodName) || interval <= 0f) return default;
 
 			var method = target.GetType().GetMethod(methodName,
 				BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-
 			if (method == null)
 			{
-				Debug.LogWarning($"Method '{methodName}' not found on {target.name}.");
+				Debug.LogWarning($"TickManager: Method '{methodName}' not found on '{target.name}'.");
 				return default;
 			}
 
@@ -197,21 +194,17 @@ namespace CustomTick
 			var tickItem = new TickMethodWithParams(id, target, method, interval, parameters, delay, oneShot, paused);
 
 			if (!tickGroups.TryGetValue(interval, out var group))
-			{
-				group = new TickGroup();
-				tickGroups.Add(interval, group);
-			}
+				tickGroups[interval] = group = new TickGroup();
 
 			group.Items.Add(tickItem);
 
-			var handle = new TickHandle {Id = id};
 #if UNITY_EDITOR
-			handle.Type = TickType.Action;
+			tickIdToType[id] = TickType.MethodWithParams;
+			if (!string.IsNullOrEmpty(description))
+				tickDescriptions[id] = description;
 #endif
-#if UNITY_EDITOR
-			tickIdToType[id] = TickType.Action;
-#endif
-			return handle;
+
+			return new TickHandle {Id = id};
 		}
 
 		public static void Unregister(TickHandle handle)
@@ -275,6 +268,9 @@ namespace CustomTick
 		public static bool EditorTryGetType(int id, out TickType type) => tickIdToType.TryGetValue(id, out type);
 
 		public static IReadOnlyDictionary<float, TickGroup> EditorGetGroups() => tickGroups;
+
+		public static bool EditorTryGetDescription(int id, out string desc) =>
+			tickDescriptions.TryGetValue(id, out desc);
 
 #endif
 	}

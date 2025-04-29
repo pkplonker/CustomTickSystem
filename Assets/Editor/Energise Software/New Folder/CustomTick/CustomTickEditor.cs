@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEditor;
 using System.Linq;
@@ -10,6 +11,7 @@ namespace CustomTick.Editor
 		private string searchQuery = "";
 		private bool showOnlyActive = false;
 		private bool groupExpanded = true;
+		private readonly Dictionary<float, bool> groupFoldouts = new();
 
 		[MenuItem("Window/Energise Software/Custom Tick")]
 		public static void Open()
@@ -43,9 +45,15 @@ namespace CustomTick.Editor
 				var group = pair.Value;
 				var items = group.Items;
 
-				groupExpanded = EditorGUILayout.Foldout(groupExpanded,
+				if (!groupFoldouts.TryGetValue(interval, out var expanded))
+					expanded = true;
+
+				expanded = EditorGUILayout.Foldout(expanded,
 					$"Interval Group: {interval:0.000}s | Items: {items.Count}", true);
-				if (!groupExpanded) continue;
+
+				groupFoldouts[interval] = expanded;
+
+				if (!expanded) continue;
 
 				EditorGUI.indentLevel++;
 				for (int i = 0; i < items.Count; i++)
@@ -118,8 +126,9 @@ namespace CustomTick.Editor
 				GUI.color = Color.cyan;
 
 			EditorGUILayout.BeginHorizontal();
-
-			GUILayout.Label($"[ID:{id}] [{type}] [{paused}] [{once}] [{status}]", GUILayout.ExpandWidth(true));
+			string description = TickManager.EditorTryGetDescription(item.GetId(), out var desc) ? desc : "(Unnamed)";
+			GUILayout.Label($"[ID:{id}] [{type}] [{paused}] [{once}] [{status}] {description}",
+				GUILayout.ExpandWidth(true));
 
 			if (GUILayout.Button(item.IsPaused() ? "Resume" : "Pause", GUILayout.Width(60)))
 			{
@@ -141,6 +150,11 @@ namespace CustomTick.Editor
 			EditorGUILayout.EndHorizontal();
 
 			GUI.color = originalColor;
+		}
+
+		private void OnDisable()
+		{
+			groupFoldouts.Clear();
 		}
 	}
 }
