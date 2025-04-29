@@ -13,6 +13,7 @@ namespace CustomTick
 		private static List<TickMethod> tickMethods = new();
 		private static List<TickAction> tickActions = new();
 		private static List<TickMethodWithParams> tickMethodsWithParams = new();
+		private static Dictionary<float, TickGroup> tickGroups = new();
 
 		private static bool initialized = false;
 		private static int nextId = 1;
@@ -57,13 +58,28 @@ namespace CustomTick
 					{
 						if (method.GetParameters().Length == 0)
 						{
-							int id = nextId++; // 🔥 Assign new unique ID!
-							tickMethods.Add(new TickMethod(id, behaviour, method, tickAttr.Interval, tickAttr.Delay));
+							int id = nextId++;
+							var tickItem = new TickMethod(
+								id,
+								behaviour,
+								method,
+								tickAttr.Interval,
+								tickAttr.Delay,
+								oneShot: false,
+								paused: false
+							);
+
+							if (!tickGroups.TryGetValue(tickAttr.Interval, out var group))
+							{
+								group = new TickGroup();
+								tickGroups.Add(tickAttr.Interval, group);
+							}
+
+							group.Items.Add(tickItem);
 						}
 						else
 						{
-							Debug.LogWarning(
-								$"[Tick] method '{method.Name}' on '{behaviour.name}' must have no parameters.");
+							Debug.LogWarning($"[Tick] method '{method.Name}' on '{behaviour.name}' must have no parameters.");
 						}
 					}
 				}
@@ -94,79 +110,33 @@ namespace CustomTick
 		{
 			float deltaTime = Time.deltaTime;
 
-			// Clean up destroyed objects
-			for (int i = tickMethods.Count - 1; i >= 0; i--)
+			foreach (var group in tickGroups.Values)
 			{
-				if (tickMethods[i].Target == null)
+				var items = group.Items;
+
+				for (int i = items.Count - 1; i >= 0; i--)
 				{
-					tickMethods.RemoveAt(i);
-				}
-			}
+					var item = items[i];
 
-			// Tick attribute methods
-			for (int i = 0; i < tickMethods.Count; i++)
-			{
-				var tickMethod = tickMethods[i];
+					if (!item.IsValid())
+					{
+						items.RemoveAt(i);
+						continue;
+					}
 
-				if (tickMethod.DelayRemaining > 0f)
-				{
-					tickMethod.DelayRemaining -= deltaTime;
-					continue;
-				}
+					if (item.ShouldTick(deltaTime))
+					{
+						item.Execute();
 
-				tickMethod.Timer -= deltaTime;
-				if (tickMethod.Timer <= 0f)
-				{
-					tickMethod.Method.Invoke(tickMethod.Target, null);
-					tickMethod.Timer = tickMethod.Interval;
-				}
-			}
-
-			// Tick manual actions
-			for (int i = 0; i < tickActions.Count; i++)
-			{
-				var tickAction = tickActions[i];
-
-				if (tickAction.DelayRemaining > 0f)
-				{
-					tickAction.DelayRemaining -= deltaTime;
-					continue;
-				}
-
-				tickAction.Timer -= deltaTime;
-				if (tickAction.Timer <= 0f)
-				{
-					tickAction.Callback?.Invoke();
-					tickAction.Timer = tickAction.Interval;
-				}
-			}
-
-			for (int i = tickMethodsWithParams.Count - 1; i >= 0; i--)
-			{
-				var tickMethod = tickMethodsWithParams[i];
-
-				if (tickMethod.Target == null)
-				{
-					tickMethodsWithParams.RemoveAt(i);
-					continue;
-				}
-
-				if (tickMethod.DelayRemaining > 0f)
-				{
-					tickMethod.DelayRemaining -= deltaTime;
-					continue;
-				}
-
-				tickMethod.Timer -= deltaTime;
-				if (tickMethod.Timer <= 0f)
-				{
-					tickMethod.Method.Invoke(tickMethod.Target, tickMethod.Parameters);
-					tickMethod.Timer = tickMethod.Interval;
+						if (item.IsOneShot())
+							items.RemoveAt(i);
+					}
 				}
 			}
 		}
 
-		public static TickHandle Register(Action callback, float interval, float delay = 0f)
+		public static TickHandle Register(Action callback, float interval, float delay = 0f, bool oneShot = false,
+			bool paused = false)
 		{
 			if (callback == null || interval <= 0f)
 			{
@@ -175,13 +145,21 @@ namespace CustomTick
 			}
 
 			int id = nextId++;
-			tickActions.Add(new TickAction(id, callback, interval, delay));
+			var tickItem = new TickAction(id, callback, interval, delay, oneShot, paused);
+
+			if (!tickGroups.TryGetValue(interval, out var group))
+			{
+				group = new TickGroup();
+				tickGroups.Add(interval, group);
+			}
+
+			group.Items.Add(tickItem);
 
 			return new TickHandle {Id = id, Type = TickType.Action};
 		}
 
 		public static TickHandle Register(MonoBehaviour target, string methodName, object[] parameters, float interval,
-			float delay = 0f)
+			float delay = 0f, bool oneShot = false, bool paused = false)
 		{
 			if (target == null || string.IsNullOrEmpty(methodName) || interval <= 0f)
 			{
@@ -199,7 +177,15 @@ namespace CustomTick
 			}
 
 			int id = nextId++;
-			tickMethodsWithParams.Add(new TickMethodWithParams(id, target, method, interval, parameters, delay));
+			var tickItem = new TickMethodWithParams(id, target, method, interval, parameters, delay, oneShot, paused);
+
+			if (!tickGroups.TryGetValue(interval, out var group))
+			{
+				group = new TickGroup();
+				tickGroups.Add(interval, group);
+			}
+
+			group.Items.Add(tickItem);
 
 			return new TickHandle {Id = id, Type = TickType.MethodWithParams};
 		}
@@ -209,57 +195,26 @@ namespace CustomTick
 			if (!handle.IsValid)
 				return;
 
-			switch (handle.Type)
+			foreach (var group in tickGroups.Values)
 			{
-				case TickType.Action:
-					for (int i = tickActions.Count - 1; i >= 0; i--)
+				var items = group.Items;
+				for (int i = items.Count - 1; i >= 0; i--)
+				{
+					if (items[i].GetId() == handle.Id)
 					{
-						if (tickActions[i].Id == handle.Id)
-						{
-							tickActions.RemoveAt(i);
-							return;
-						}
+						items.RemoveAt(i);
+						return;
 					}
-
-					break;
-				case TickType.Method:
-					for (int i = tickMethods.Count - 1; i >= 0; i--)
-					{
-						if (tickMethods[i].Id == handle.Id)
-						{
-							tickMethods.RemoveAt(i);
-							return;
-						}
-					}
-
-					break;
-				case TickType.MethodWithParams:
-					for (int i = tickMethodsWithParams.Count - 1; i >= 0; i--)
-					{
-						if (tickMethodsWithParams[i].Id == handle.Id)
-						{
-							tickMethodsWithParams.RemoveAt(i);
-							return;
-						}
-					}
-
-					break;
+				}
 			}
 		}
 
 		public struct TickHandle
 		{
 			internal int Id;
-			internal TickType Type;
+			internal TickManager.TickType Type;
 
 			public bool IsValid => Id != 0;
-		}
-
-		internal enum TickType
-		{
-			Action,
-			Method,
-			MethodWithParams
 		}
 	}
 }

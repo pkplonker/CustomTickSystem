@@ -34,13 +34,13 @@ namespace CustomTick
 		[Tick(1.0f)]
 		private void TickEverySecond()
 		{
-			//Debug.Log($"[Tick] Every 1 second at {Time.time}");
+			Debug.Log($"[Tick] Every 1 second at {Time.time}");
 		}
 
 		[Tick(0.5f)]
 		private void TickTwiceASecond()
 		{
-			//Debug.Log($"[Tick] Every 0.5 second at {Time.time}");
+			Debug.Log($"[Tick] Every 0.5 second at {Time.time}");
 		}
 
 		[Tick(2.0f, 5.0f)]
