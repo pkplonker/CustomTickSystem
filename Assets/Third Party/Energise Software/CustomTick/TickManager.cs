@@ -68,7 +68,9 @@ namespace CustomTick
 								group = new TickGroup();
 								tickGroups.Add(tickAttr.Interval, group);
 							}
-
+#if UNITY_EDITOR
+							tickIdToType[id] = TickType.Method;
+#endif
 							group.Items.Add(tickItem);
 						}
 						else
@@ -105,8 +107,11 @@ namespace CustomTick
 		{
 			float deltaTime = Time.deltaTime;
 
-			foreach (var group in tickGroups.Values)
+			var groupsToRemove = new List<float>();
+
+			foreach (var pair in tickGroups)
 			{
+				var group = pair.Value;
 				var items = group.Items;
 
 				for (int i = items.Count - 1; i >= 0; i--)
@@ -127,6 +132,16 @@ namespace CustomTick
 						items.RemoveAt(i);
 					}
 				}
+
+				if (items.Count == 0)
+				{
+					groupsToRemove.Add(pair.Key);
+				}
+			}
+
+			for (int i = 0; i < groupsToRemove.Count; i++)
+			{
+				tickGroups.Remove(groupsToRemove[i]);
 			}
 		}
 
@@ -212,6 +227,44 @@ namespace CustomTick
 					if (items[i].GetId() == handle.Id)
 					{
 						items.RemoveAt(i);
+						return;
+					}
+				}
+			}
+		}
+
+		public static void Pause(TickHandle handle)
+		{
+			if (!handle.IsValid)
+				return;
+
+			foreach (var group in tickGroups.Values)
+			{
+				var items = group.Items;
+				for (int i = 0; i < items.Count; i++)
+				{
+					if (items[i].GetId() == handle.Id)
+					{
+						items[i].SetPaused(true);
+						return;
+					}
+				}
+			}
+		}
+
+		public static void Resume(TickHandle handle)
+		{
+			if (!handle.IsValid)
+				return;
+
+			foreach (var group in tickGroups.Values)
+			{
+				var items = group.Items;
+				for (int i = 0; i < items.Count; i++)
+				{
+					if (items[i].GetId() == handle.Id)
+					{
+						items[i].SetPaused(false);
 						return;
 					}
 				}
