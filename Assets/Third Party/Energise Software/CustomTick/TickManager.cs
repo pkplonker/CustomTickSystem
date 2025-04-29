@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -9,13 +10,12 @@ using UnityEngine.SceneManagement;
 namespace CustomTick
 {
 	[DefaultExecutionOrder(-10000)]
-	internal static partial class TickManager
+	internal static class TickManager
 	{
-		private static List<TickMethod> tickMethods = new();
-		private static List<TickAction> tickActions = new();
-		private static List<TickMethodWithParams> tickMethodsWithParams = new();
 		private static Dictionary<float, TickGroup> tickGroups = new();
-
+#if UNITY_EDITOR
+		private static readonly Dictionary<int, TickType> tickIdToType = new();
+#endif
 		private static bool initialized = false;
 		private static int nextId = 1;
 
@@ -30,16 +30,9 @@ namespace CustomTick
 			SceneManager.sceneLoaded += OnSceneLoaded;
 		}
 
-		private static void OnSceneLoaded(Scene scene, LoadSceneMode mode)
-		{
-			RescanAll();
-		}
+		private static void OnSceneLoaded(Scene scene, LoadSceneMode mode) => RescanAll();
 
-		private static void RescanAll()
-		{
-			tickMethods.Clear();
-			ScanScene();
-		}
+		private static void RescanAll() => ScanScene();
 
 		private static void ScanScene()
 		{
@@ -161,6 +154,9 @@ namespace CustomTick
 #if UNITY_EDITOR
 			handle.Type = TickType.Action;
 #endif
+#if UNITY_EDITOR
+			tickIdToType[id] = TickType.Action;
+#endif
 			return handle;
 		}
 
@@ -197,6 +193,9 @@ namespace CustomTick
 #if UNITY_EDITOR
 			handle.Type = TickType.Action;
 #endif
+#if UNITY_EDITOR
+			tickIdToType[id] = TickType.Action;
+#endif
 			return handle;
 		}
 
@@ -218,5 +217,12 @@ namespace CustomTick
 				}
 			}
 		}
+
+#if UNITY_EDITOR
+		public static bool EditorTryGetType(int id, out TickType type) => tickIdToType.TryGetValue(id, out type);
+
+		public static IReadOnlyDictionary<float, TickGroup> EditorGetGroups() => tickGroups;
+
+#endif
 	}
 }
