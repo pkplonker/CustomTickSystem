@@ -109,7 +109,7 @@ namespace CustomTick
 		{
 			float deltaTime = Time.deltaTime;
 
-			var groupsToRemove = new List<float>();
+			groupsToRemove.Clear();
 
 			foreach (var pair in tickGroups)
 			{
@@ -146,6 +146,7 @@ namespace CustomTick
 				tickGroups.Remove(groupsToRemove[i]);
 			}
 		}
+		private static readonly List<float> groupsToRemove = new();
 
 		public static TickHandle Register(Action callback, float interval, float delay = 0f, bool oneShot = false,
 			bool paused = false
