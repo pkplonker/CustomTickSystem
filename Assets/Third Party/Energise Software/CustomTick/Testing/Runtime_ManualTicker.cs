@@ -3,7 +3,7 @@ using UnityEngine;
 
 namespace CustomTick
 {
-	public class ExampleTicker : MonoBehaviour
+	public class Runtime_ManualTicker : MonoBehaviour
 	{
 		private TickHandle manualActionHandle;
 		private TickHandle manualParamHandle;

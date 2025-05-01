@@ -2,7 +2,7 @@
 
 namespace CustomTick
 {
-	public class StressTester : MonoBehaviour
+	public class RuntimeProfilerTester : MonoBehaviour
 	{
 		[SerializeField] private int CountPerType = 500;
 		private TickHandle[] actionHandles;

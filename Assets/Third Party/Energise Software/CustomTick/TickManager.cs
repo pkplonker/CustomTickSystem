@@ -146,6 +146,7 @@ namespace CustomTick
 				tickGroups.Remove(groupsToRemove[i]);
 			}
 		}
+
 		private static readonly List<float> groupsToRemove = new();
 
 		public static TickHandle Register(Action callback, float interval, float delay = 0f, bool oneShot = false,
@@ -272,6 +273,14 @@ namespace CustomTick
 
 		public static bool EditorTryGetDescription(int id, out string desc) =>
 			tickDescriptions.TryGetValue(id, out desc);
+
+		public static void EditorReset()
+		{
+			tickGroups.Clear();
+			tickIdToType.Clear();
+			tickDescriptions.Clear();
+			nextId = 1;
+		}
 
 #endif
 	}
