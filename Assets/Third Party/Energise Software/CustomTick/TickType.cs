@@ -1,8 +1,11 @@
-﻿#if UNITY_EDITOR
-internal enum TickType
+﻿namespace CustomTick
 {
-	Action,
-	Method,
-	MethodWithParams
-}
+#if UNITY_EDITOR
+	internal enum TickType
+	{
+		Action,
+		Method,
+		MethodWithParams
+	}
 #endif
+}
