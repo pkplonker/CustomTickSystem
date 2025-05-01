@@ -3,9 +3,15 @@ using UnityEngine;
 
 namespace CustomTick
 {
+	/// <summary>
+	/// Fluent builder for registering tick functions with the TickManager.
+	/// </summary>
+	/// <remarks>
+	/// Supports both parameterless <see cref="Action"/> delegates and methods on MonoBehaviours with optional parameters.
+	/// Allows configuration of tick interval, delay, one-shot execution, and pause state.
+	/// </remarks>
 	public class TickBuilder
 	{
-		// State
 		private Action action;
 		private MonoBehaviour target;
 		private string methodName;
@@ -18,13 +24,18 @@ namespace CustomTick
 
 		private bool isAction;
 		private bool isMethodWithParams;
+
 #if UNITY_EDITOR
 		private string description;
 #endif
 
 		private TickBuilder() { }
 
-		// Entry point for Action
+		/// <summary>
+		/// Creates a TickBuilder for an <see cref="Action"/> delegate.
+		/// </summary>
+		/// <param name="action">The method to invoke on each tick.</param>
+		/// <returns>A new TickBuilder instance.</returns>
 		public static TickBuilder Create(Action action) =>
 			new()
 			{
@@ -32,7 +43,13 @@ namespace CustomTick
 				isAction = true
 			};
 
-		// Entry point for method + params
+		/// <summary>
+		/// Creates a TickBuilder for a method on a MonoBehaviour, with optional parameters.
+		/// </summary>
+		/// <param name="target">The MonoBehaviour containing the method.</param>
+		/// <param name="methodName">The name of the method to call.</param>
+		/// <param name="parameters">Optional parameters to pass to the method.</param>
+		/// <returns>A new TickBuilder instance.</returns>
 		public static TickBuilder Create(MonoBehaviour target, string methodName, object[] parameters = null) =>
 			new()
 			{
@@ -42,31 +59,50 @@ namespace CustomTick
 				isMethodWithParams = true
 			};
 
-		// Fluent settings
+		/// <summary>
+		/// Sets the interval (in seconds) at which the tick should fire.
+		/// </summary>
+		/// <param name="seconds">The tick interval, must be greater than 0.</param>
 		public TickBuilder SetInterval(float seconds)
 		{
 			interval = Mathf.Max(seconds, 0.001f);
 			return this;
 		}
 
+		/// <summary>
+		/// Sets an initial delay (in seconds) before the first tick executes.
+		/// </summary>
+		/// <param name="seconds">The delay before the first execution.</param>
 		public TickBuilder SetDelay(float seconds)
 		{
 			delay = Mathf.Max(seconds, 0f);
 			return this;
 		}
 
+		/// <summary>
+		/// Specifies whether the tick should fire only once.
+		/// </summary>
+		/// <param name="value">True for one-shot, false for repeating (default: true).</param>
 		public TickBuilder SetOneShot(bool value = true)
 		{
 			oneShot = value;
 			return this;
 		}
 
+		/// <summary>
+		/// Sets whether the tick should start in a paused state.
+		/// </summary>
+		/// <param name="value">True to start paused, false to start active (default: true).</param>
 		public TickBuilder SetPaused(bool value = true)
 		{
 			paused = value;
 			return this;
 		}
 
+		/// <summary>
+		/// Finalizes the builder and registers the tick with the TickManager.
+		/// </summary>
+		/// <returns>A handle to the registered tick.</returns>
 		public TickHandle Register()
 		{
 #if UNITY_EDITOR
@@ -109,6 +145,10 @@ namespace CustomTick
 			return default;
 		}
 
+		/// <summary>
+		/// Sets an optional editor-only description for debugging and profiling purposes.
+		/// </summary>
+		/// <param name="desc">A label for the tick, shown in the editor.</param>
 		public TickBuilder SetDescription(string desc)
 		{
 #if UNITY_EDITOR
